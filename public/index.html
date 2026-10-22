@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keicho Harness — 法人慶弔・電報・供花・胡蝶蘭 AI手配＆重複防止エンジン</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+  <header class="border-b border-slate-800 bg-slate-900/70 backdrop-blur sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold">KEICHO HARNESS</span>
+        <h1 class="text-lg font-bold">法人慶弔（弔電・祝電・供花・胡蝶蘭）AI規程判定＆重複手配防止エンジン</h1>
+      </div>
+      <div class="text-xs text-emerald-400 font-mono">Cloudflare Workers + D1 + MCP (¥0/mo)</div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <section class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+      <div class="text-xs text-amber-400 font-semibold uppercase tracking-wider mb-1">Instant Corporate Etiquette & Dispatch</div>
+      <h2 class="text-xl font-bold mb-4">訃報・就任案内の0秒構造化＆手配稟議</h2>
+      <form id="keichoForm" class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">慶弔区分</label>
+            <select id="event_category" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-2 text-xs">
+              <option value="おくやみ（訃報）">おくやみ（訃報）</option>
+              <option value="就任・昇進・上場祝い">就任・昇進・上場祝い</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">宗教・宗派（お悔やみ時）</label>
+            <select id="religion_style" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-2 text-xs">
+              <option value="仏式">仏式</option>
+              <option value="神式">神式（冥福・成仏NG自動排除）</option>
+              <option value="キリスト教式">キリスト教式</option>
+              <option value="無宗教・祝賀">無宗教・祝賀</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">取引先企業名</label>
+            <input id="client_company" required value="株式会社東都ホールディングス" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">取引先ランク（社内規程連動）</label>
+            <select id="client_tier" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-2 text-xs">
+              <option value="S（重要取引先）">S（重要取引先）</option>
+              <option value="A（主要取引先）">A（主要取引先）</option>
+              <option value="B（一般取引先）">B（一般取引先）</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">対象者氏名（旧字体対応）</label>
+            <input id="target_person_name" required value="齋藤 宗一郎" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">対象者役職・続柄</label>
+            <input id="target_person_role" required value="名誉会長" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">式場・届先会場</label>
+            <input id="venue_name" required value="青山葬儀所 第一斎場" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">通夜・式典日時</label>
+            <input id="ceremony_datetime" required value="2026-10-23 18:00" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">訃報・案内状テキスト（香典・供花辞退の自動検知用）</label>
+          <textarea id="raw_notice_text" rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs">故人の遺志により、誠に勝手ながら御香典は固くご辞退申し上げます。（供花は青山葬儀所にて承ります）</textarea>
+        </div>
+        <div id="alertBox" class="hidden p-3 rounded-lg bg-rose-950 border border-rose-500 text-rose-200 text-xs"></div>
+        <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition">
+          社内規程照合 ➔ 重複チェック＆電報・立札・仕訳を一括生成
+        </button>
+      </form>
+    </section>
+
+    <section class="lg:col-span-7 space-y-6">
+      <div class="grid grid-cols-3 gap-3" id="metricsCards"></div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <h3 class="text-base font-bold mb-3">📜 慶弔手配台帳（重複防止ロック・立札プレビュー・交際費税区分）</h3>
+        <div id="ordersList" class="space-y-4 text-sm"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    async function load() {
+      const data = await fetch('/api/dashboard').then(r => r.json());
+      const m = data.metrics;
+      document.getElementById('metricsCards').innerHTML = `
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl"><div class="text-xs text-slate-400">手配完了件数</div><div class="text-2xl font-bold mt-1">${m.total_orders}件</div></div>
+        <div class="bg-slate-900 border border-amber-500/30 p-4 rounded-xl"><div class="text-xs text-amber-400">慶弔手配総額</div><div class="text-2xl font-bold text-amber-300 mt-1">¥${m.total_keicho_budget_jpy.toLocaleString()}</div></div>
+        <div class="bg-slate-900 border border-emerald-500/30 p-4 rounded-xl"><div class="text-xs text-emerald-400">送客収益マージン試算</div><div class="text-2xl font-bold text-emerald-300 mt-1">¥${m.estimated_partner_margin_jpy.toLocaleString()}</div></div>
+      `;
+      document.getElementById('ordersList').innerHTML = data.orders.map(o => `
+        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-amber-300">[${o.event_category} / ${o.religion_style}] ${o.client_company} ${o.target_person_role} ${o.target_person_name}様</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-bold">¥${Number(o.total_estimated_jpy).toLocaleString()}</span>
+          </div>
+          <div class="text-xs text-cyan-300 font-semibold">🎁 社内規程判定パッケージ: ${o.recommended_package}（${o.decline_flags}）</div>
+          <div class="text-xs text-slate-300 font-mono bg-slate-900 p-2 rounded border border-slate-800">${o.tatefuda_preview}</div>
+          <div class="text-xs text-slate-200 bg-slate-900 p-3 rounded border border-amber-500/30 whitespace-pre-wrap">${o.telegram_body}</div>
+          <div class="text-xs text-emerald-400">${o.taboo_check_result}</div>
+          <div class="text-xs text-slate-400 font-mono">🧾 経理仕訳: ${o.tax_accounting_note}</div>
+        </div>
+      `).join('') || '<div class="text-xs text-slate-500">まだ慶弔手配履歴がありません</div>';
+    }
+
+    document.getElementById('keichoForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const alertBox = document.getElementById('alertBox');
+      alertBox.classList.add('hidden');
+      const res = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_category: document.getElementById('event_category').value,
+          religion_style: document.getElementById('religion_style').value,
+          client_company: document.getElementById('client_company').value,
+          client_tier: document.getElementById('client_tier').value,
+          target_person_name: document.getElementById('target_person_name').value,
+          target_person_role: document.getElementById('target_person_role').value,
+          chief_mourner_or_recipient: document.getElementById('target_person_name').value,
+          venue_name: document.getElementById('venue_name').value,
+          ceremony_datetime: document.getElementById('ceremony_datetime').value,
+          raw_notice_text: document.getElementById('raw_notice_text').value,
+        })
+      });
+      const json = await res.json();
+      if (!res.ok && json.duplicate_blocked) {
+        alertBox.textContent = json.message;
+        alertBox.classList.remove('hidden');
+      }
+      await load();
+    });
+    load();
+  </script>
+</body>
+</html>
